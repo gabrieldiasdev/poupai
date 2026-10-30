@@ -1,0 +1,124 @@
+rules_version = '2';
+
+// Each person's data lives under users/{uid} and only that person can read or write it.
+// Writes are also checked for shape, so a bug or a tampered client can't store junk.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isName(value) {
+      return value is string && value.size() > 0 && value.size() <= 60;
+    }
+
+    function isAmount(value) {
+      return value is int && value > 0 && value < 100000000000;
+    }
+
+    function isOptionalId(value) {
+      return value == null || (value is string && value.size() <= 100);
+    }
+
+    function isDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isMonth(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}$');
+    }
+
+    function isCurrency(value) {
+      return value in ['EUR', 'BRL'];
+    }
+
+    function isProfile(data) {
+      return data.keys().hasOnly(['onboarded', 'brlPerEur', 'createdAt'])
+        && (!('onboarded' in data) || data.onboarded is bool)
+        && (!('brlPerEur' in data) || (data.brlPerEur is number && data.brlPerEur > 0));
+    }
+
+    function isAccount(data) {
+      return data.keys().hasOnly(['name', 'currency'])
+        && isName(data.name) && isCurrency(data.currency);
+    }
+
+    function isCategory(data) {
+      return data.keys().hasOnly(['name', 'icon', 'kind', 'order'])
+        && isName(data.name) && data.icon is string && data.icon.size() <= 40
+        && data.kind in ['expense', 'income'] && data.order is int;
+    }
+
+    function isTransaction(data) {
+      return data.keys().hasOnly([
+          'type', 'status', 'amount', 'accountId', 'categoryId', 'date', 'note',
+          'recurrenceId', 'toAccountId', 'toAmount', 'goalId', 'updatedAt'
+        ])
+        && data.type in ['expense', 'income', 'transfer', 'saving']
+        && data.status in ['planned', 'confirmed', 'skipped']
+        && isAmount(data.amount)
+        && data.accountId is string && data.accountId.size() > 0
+        && isOptionalId(data.categoryId)
+        && isDate(data.date)
+        && data.note is string && data.note.size() <= 200
+        && isOptionalId(data.recurrenceId)
+        && isOptionalId(data.toAccountId)
+        && (data.toAmount == null || isAmount(data.toAmount))
+        && isOptionalId(data.goalId)
+        && (data.type != 'transfer' || (data.toAccountId is string && isAmount(data.toAmount)))
+        && (data.type != 'saving' || data.goalId is string);
+    }
+
+    function isRecurrence(data) {
+      return data.keys().hasOnly([
+          'name', 'type', 'amount', 'accountId', 'categoryId', 'day', 'months', 'startMonth', 'active'
+        ])
+        && isName(data.name)
+        && data.type in ['expense', 'income']
+        && isAmount(data.amount)
+        && data.accountId is string
+        && isOptionalId(data.categoryId)
+        && data.day is int && data.day >= 1 && data.day <= 31
+        && (data.months == null || (data.months is list && data.months.size() <= 12))
+        && isMonth(data.startMonth)
+        && data.active is bool;
+    }
+
+    function isGoal(data) {
+      return data.keys().hasOnly(['name', 'target', 'monthly', 'saved'])
+        && isName(data.name) && isAmount(data.target)
+        && data.monthly is int && data.monthly >= 0
+        && data.saved is int;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isProfile(request.resource.data);
+
+      match /accounts/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isAccount(request.resource.data);
+      }
+
+      match /categories/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isCategory(request.resource.data);
+      }
+
+      match /transactions/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isTransaction(request.resource.data);
+      }
+
+      match /recurrences/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isRecurrence(request.resource.data);
+      }
+
+      match /goals/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isGoal(request.resource.data);
+      }
+    }
+  }
+}

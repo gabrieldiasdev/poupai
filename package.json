@@ -1,0 +1,45 @@
+{
+  "name": "poupai",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:emulators": "vite --mode emulators",
+    "emulators": "firebase emulators:start --project demo-poupai",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "lint": "oxlint",
+    "test": "vitest run --project unit",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-poupai \"vitest run --project rules\"",
+    "generate-pwa-assets": "pwa-assets-generator",
+    "deploy": "npm run build && firebase deploy --only hosting,firestore --project default"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "clsx": "^2.1.1",
+    "firebase": "^12.19.0",
+    "lucide-react": "^1.52.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^8.4.0",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "firebase-tools": "^15.32.1",
+    "oxlint": "^1.81.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
+  }
+}
