@@ -37,6 +37,8 @@ npm run test:rules   # regras de segurança do Firestore, no emulador
 
 ## Publicar
 
-1. Crie um projeto Firebase numa **região europeia** e ative Authentication (Google) e Firestore.
-2. Copie `.env.example` para `.env.local` e preencha com a configuração da app web.
-3. Troque `demo-poupai` em `.firebaserc` pelo id do projeto e rode `npm run deploy`.
+O projeto de produção é `poupai-eu` (Firestore em `eur3`), já definido em `.firebaserc`.
+
+1. Gere a configuração da app web em `.env.local` (fora do Git):
+   `npx firebase apps:sdkconfig WEB --project poupai-eu` e copie os valores para as variáveis de `.env.example`.
+2. `npm run deploy` publica o app no Hosting e as regras e índices do Firestore.
