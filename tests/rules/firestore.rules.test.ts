@@ -53,8 +53,9 @@ describe('ownership', () => {
 
 describe('shape checks', () => {
   it('accepts a valid profile and rejects unknown fields', async () => {
-    await assertSucceeds(setDoc(doc(alice(), 'users/alice'), { onboarded: true, brlPerEur: 6.2 }))
+    await assertSucceeds(setDoc(doc(alice(), 'users/alice'), { onboarded: true, baseCurrency: 'BRL', rates: { EUR: 0.16 } }))
     await assertFails(setDoc(doc(alice(), 'users/alice'), { onboarded: true, isAdmin: true }))
+    await assertFails(setDoc(doc(alice(), 'users/alice'), { onboarded: true, baseCurrency: 'XYZ' }))
   })
 
   it('rejects amounts that are not positive whole cents', async () => {
@@ -77,7 +78,7 @@ describe('shape checks', () => {
 
   it('checks accounts, recurrences and goals', async () => {
     await assertSucceeds(setDoc(doc(alice(), 'users/alice/accounts/bank'), { name: 'Bankinter', currency: 'EUR' }))
-    await assertFails(setDoc(doc(alice(), 'users/alice/accounts/usd'), { name: 'Dólares', currency: 'USD' }))
+    await assertFails(setDoc(doc(alice(), 'users/alice/accounts/jpy'), { name: 'Ienes', currency: 'JPY' }))
 
     const recurrence = {
       name: 'Salário',

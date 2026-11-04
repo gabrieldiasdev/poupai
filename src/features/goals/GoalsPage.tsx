@@ -4,20 +4,24 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { addMonths, formatMonth } from '@/domain/dates'
 import type { Goal } from '@/domain/model'
-import { formatMoney } from '@/domain/money'
+import { formatMoney, toBase } from '@/domain/money'
 import { useData } from '@/features/data/dataContext'
 import { useEntrySheet } from '@/features/transactions/entrySheetContext'
 import { GoalSheet } from './GoalSheet'
 
 export function GoalsPage() {
-  const { goals, transactions, month, today } = useData()
+  const { goals, transactions, month, today, baseCurrency, rates, writeContext } = useData()
   const openEntry = useEntrySheet()
   const [editing, setEditing] = useState<{ goal?: Goal } | null>(null)
 
   const savedThisMonth = (goal: Goal) =>
     transactions
       .filter((transaction) => transaction.type === 'saving' && transaction.status === 'confirmed' && transaction.goalId === goal.id)
-      .reduce((total, transaction) => total + transaction.amount, 0)
+      .reduce(
+        (total, transaction) =>
+          total + toBase(transaction.amount, writeContext.currencyOf(transaction.accountId), baseCurrency, rates),
+        0,
+      )
 
   return (
     <div>
@@ -37,6 +41,9 @@ export function GoalsPage() {
             <PiggyBank className="mx-auto size-8 text-primary" aria-hidden />
             <p className="mt-2 font-medium">Comece pelo fundo de emergência</p>
             <p className="mt-1 text-sm text-muted">Uma reserva para imprevistos é o primeiro passo antes de investir.</p>
+            <Button size="sm" className="mt-3" onClick={() => setEditing({})}>
+              Criar fundo de emergência
+            </Button>
           </div>
         )}
 
@@ -52,8 +59,8 @@ export function GoalsPage() {
                   <h2 className="font-medium">{goal.name}</h2>
                   <span className="text-sm text-muted">{Math.round(progress * 100)}%</span>
                 </div>
-                <p className="mt-1 font-display text-2xl font-medium tabular-nums">{formatMoney(goal.saved)}</p>
-                <p className="text-sm text-muted">de {formatMoney(goal.target)}</p>
+                <p className="mt-1 font-display text-2xl font-medium tabular-nums">{formatMoney(goal.saved, baseCurrency)}</p>
+                <p className="text-sm text-muted">de {formatMoney(goal.target, baseCurrency)}</p>
                 <div className="mt-3 h-2.5 rounded-full bg-subtle">
                   <div className="h-2.5 rounded-full bg-brand-500" style={{ width: `${progress * 100}%` }} />
                 </div>
@@ -61,14 +68,14 @@ export function GoalsPage() {
                   {remaining === 0
                     ? 'Meta atingida!'
                     : monthsLeft
-                      ? `${formatMoney(goal.monthly, 'EUR', { compact: true })} por mês · pronta em ${formatMonth(addMonths(month, monthsLeft), today)}`
+                      ? `${formatMoney(goal.monthly, baseCurrency, { compact: true })} por mês · pronta em ${formatMonth(addMonths(month, monthsLeft), today)}`
                       : 'Defina quanto guardar por mês para ver quando fica pronta.'}
                 </p>
                 {goal.monthly > 0 && remaining > 0 && (
                   <p className="mt-1 text-xs text-muted">
                     {thisMonth >= goal.monthly
-                      ? `Este mês você já guardou ${formatMoney(thisMonth)}.`
-                      : `Este mês: ${formatMoney(thisMonth)} de ${formatMoney(goal.monthly)}`}
+                      ? `Este mês você já guardou ${formatMoney(thisMonth, baseCurrency)}.`
+                      : `Este mês: ${formatMoney(thisMonth, baseCurrency)} de ${formatMoney(goal.monthly, baseCurrency)}`}
                   </p>
                 )}
               </button>

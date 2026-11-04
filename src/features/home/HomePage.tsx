@@ -6,7 +6,7 @@ import { useToast } from '@/components/toast/toastContext'
 import { Button } from '@/components/ui/Button'
 import { confirmTransaction } from '@/data/repository'
 import { daysBetween, formatDay, formatMonth } from '@/domain/dates'
-import type { Transaction } from '@/domain/model'
+import type { Currency, Transaction } from '@/domain/model'
 import { formatMoney } from '@/domain/money'
 import { plannedThisMonth, summarizeMonth } from '@/domain/summary'
 import { useData } from '@/features/data/dataContext'
@@ -16,11 +16,11 @@ import { cn } from '@/lib/cn'
 
 export function HomePage() {
   const data = useData()
-  const { uid, transactions, accounts, goals, brlPerEur, today, month, categoryById, recurrences } = data
+  const { uid, transactions, accounts, goals, baseCurrency, rates, today, month, categoryById, recurrences } = data
   const openEntry = useEntrySheet()
   const toast = useToast()
 
-  const summary = summarizeMonth(transactions, accounts, goals, brlPerEur, today)
+  const summary = summarizeMonth(transactions, accounts, goals, baseCurrency, rates, today)
   const planned = plannedThisMonth(transactions, today)
   const overspent = summary.spendable < 0
 
@@ -39,19 +39,19 @@ export function HomePage() {
         <section className="rounded-2xl bg-accent-soft p-5 text-accent-ink" aria-label="Quanto ainda pode gastar">
           <p className="text-sm">{overspent ? 'Passou do previsto este mês' : 'Ainda pode gastar este mês'}</p>
           <p className="mt-1 font-display text-4xl font-medium tabular-nums">
-            {formatMoney(Math.abs(summary.spendable))}
+            {formatMoney(Math.abs(summary.spendable), baseCurrency)}
           </p>
           <p className="mt-1 text-sm">
             {overspent
               ? 'Já contando contas previstas e o que vai para as metas.'
-              : `Cerca de ${formatMoney(summary.perDay)} por dia até o fim do mês.`}
+              : `Cerca de ${formatMoney(summary.perDay, baseCurrency)} por dia até o fim do mês.`}
           </p>
         </section>
 
         <section className="grid grid-cols-3 gap-2 text-center" aria-label="Resumo do mês">
-          <Metric label="Entrou" value={summary.income} className="text-income" />
-          <Metric label="Saiu" value={summary.expense} className="text-expense" />
-          <Metric label="Sobrou" value={summary.left} />
+          <Metric label="Entrou" value={summary.income} currency={baseCurrency} className="text-income" />
+          <Metric label="Saiu" value={summary.expense} currency={baseCurrency} className="text-expense" />
+          <Metric label="Sobrou" value={summary.left} currency={baseCurrency} />
         </section>
 
         <LoggingReminder />
@@ -107,7 +107,7 @@ export function HomePage() {
                     <div className="flex-1">
                       <div className="flex justify-between text-sm">
                         <span>{category?.name ?? 'Sem categoria'}</span>
-                        <span className="tabular-nums">{formatMoney(amount)}</span>
+                        <span className="tabular-nums">{formatMoney(amount, baseCurrency)}</span>
                       </div>
                       <div className="mt-1 h-1.5 rounded-full bg-subtle">
                         <div className="h-1.5 rounded-full bg-brand-500" style={{ width: `${Math.max(share * 100, 3)}%` }} />
@@ -122,7 +122,7 @@ export function HomePage() {
 
         {recurrences.length === 0 && (
           <p className="text-center text-xs text-muted">
-            Dica: cadastre o salário e as contas fixas em Ajustes para o app prever o seu mês.
+            Dica: cadastre a sua renda e as contas fixas em Ajustes para o app prever o seu mês.
           </p>
         )}
       </div>
@@ -154,9 +154,9 @@ function LoggingReminder() {
   )
 }
 
-/** When a holiday or Christmas bonus arrives, suggests sending half of it to the first unfinished goal. */
+/** When a yearly extra (13th salary, holiday bonus...) arrives, suggests sending half of it to the first unfinished goal. */
 function BonusSuggestion() {
-  const { transactions, recurrences, goals } = useData()
+  const { transactions, recurrences, goals, accountById, baseCurrency } = useData()
   const openEntry = useEntrySheet()
   const [dismissed, setDismissed] = useState<string[]>(() => readDismissed())
   const bonusRecurrences = new Set(recurrences.filter((recurrence) => recurrence.months).map((recurrence) => recurrence.id))
@@ -172,6 +172,7 @@ function BonusSuggestion() {
   if (!bonus || !goal) return null
 
   const half = Math.round(bonus.amount / 2)
+  const currency = accountById.get(bonus.accountId)?.currency ?? baseCurrency
   function dismiss() {
     const next = [...dismissed, bonus!.id]
     setDismissed(next)
@@ -182,10 +183,10 @@ function BonusSuggestion() {
     <section className="rounded-xl bg-accent-soft p-4 text-accent-ink">
       <p className="flex items-center gap-2 font-medium">
         <Gift className="size-5" aria-hidden />
-        Entrou o {bonus.note || 'subsídio'}
+        Entrou: {bonus.note || 'um extra'}
       </p>
       <p className="mt-1 text-sm">
-        {formatMoney(bonus.amount)} a mais este mês. Mandar metade para “{goal.name}”?
+        {formatMoney(bonus.amount, currency)} a mais este mês. Mandar metade para “{goal.name}”?
       </p>
       <div className="mt-3 flex gap-2">
         <Button
@@ -195,7 +196,7 @@ function BonusSuggestion() {
             openEntry({ preset: { type: 'saving', amount: half, goalId: goal.id, accountId: bonus.accountId } })
           }}
         >
-          Mandar {formatMoney(half, 'EUR', { compact: true })}
+          Mandar {formatMoney(half, currency, { compact: true })}
         </Button>
         <Button size="sm" variant="ghost" onClick={dismiss}>
           Agora não
@@ -205,12 +206,22 @@ function BonusSuggestion() {
   )
 }
 
-function Metric({ label, value, className }: { label: string; value: number; className?: string }) {
+function Metric({
+  label,
+  value,
+  currency,
+  className,
+}: {
+  label: string
+  value: number
+  currency: Currency
+  className?: string
+}) {
   return (
     <div className="rounded-xl bg-surface px-2 py-3 ring-1 ring-line">
       <p className="text-xs text-muted">{label}</p>
       <p className={cn('mt-0.5 text-sm font-semibold tabular-nums', className)}>
-        {formatMoney(value, 'EUR', { compact: true })}
+        {formatMoney(value, currency, { compact: true })}
       </p>
     </div>
   )

@@ -8,7 +8,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { deleteTransaction, newId, saveRecurrence, saveTransaction } from '@/data/repository'
 import { monthOf } from '@/domain/dates'
 import type { Transaction, TransactionType } from '@/domain/model'
-import { amountToInput, parseAmount } from '@/domain/money'
+import { amountToInput, CURRENCY_SYMBOLS, parseAmount } from '@/domain/money'
 import { occurrenceId } from '@/domain/recurrence'
 import { useData } from '@/features/data/dataContext'
 import { cn } from '@/lib/cn'
@@ -27,10 +27,10 @@ interface TransactionSheetProps {
 }
 
 export function TransactionSheet({ transaction, preset, onClose }: TransactionSheetProps) {
-  const { uid, accounts, categories, goals, accountById, categoryById, today, writeContext } = useData()
+  const { uid, accounts, categories, goals, accountById, categoryById, today, baseCurrency, writeContext } = useData()
   const toast = useToast()
   const start = { ...preset, ...transaction }
-  const defaultAccount = accounts.find((account) => account.currency === 'EUR') ?? accounts[0]
+  const defaultAccount = accounts.find((account) => account.currency === baseCurrency) ?? accounts[0]
 
   const [type, setType] = useState<TransactionType>(start.type ?? 'expense')
   const [amountText, setAmountText] = useState(start.amount ? amountToInput(start.amount) : '')
@@ -49,8 +49,8 @@ export function TransactionSheet({ transaction, preset, onClose }: TransactionSh
 
   const isNew = !transaction
   const isPlanned = transaction?.status === 'planned'
-  const currency = accountById.get(accountId)?.currency ?? 'EUR'
-  const toCurrency = accountById.get(toAccountId)?.currency ?? 'EUR'
+  const currency = accountById.get(accountId)?.currency ?? baseCurrency
+  const toCurrency = accountById.get(toAccountId)?.currency ?? baseCurrency
   const crossCurrency = type === 'transfer' && currency !== toCurrency
   const visibleCategories = categories.filter((category) => category.kind === (type === 'income' ? 'income' : 'expense'))
 
@@ -196,7 +196,7 @@ export function TransactionSheet({ transaction, preset, onClose }: TransactionSh
               }}
               className="w-44 bg-transparent text-center font-display text-4xl font-medium outline-none placeholder:text-line"
             />
-            <span className="font-display text-2xl text-muted">{currency === 'EUR' ? '€' : 'R$'}</span>
+            <span className="font-display text-2xl text-muted">{CURRENCY_SYMBOLS[currency]}</span>
           </span>
         </label>
 
@@ -264,12 +264,12 @@ export function TransactionSheet({ transaction, preset, onClose }: TransactionSh
 
         {crossCurrency && (
           <TextField
-            label={`Quanto chegou (${toCurrency === 'EUR' ? '€' : 'R$'})`}
+            label={`Quanto chegou (${CURRENCY_SYMBOLS[toCurrency]})`}
             inputMode="decimal"
             placeholder="0,00"
             value={toAmountText}
             onChange={(event) => setToAmountText(event.target.value)}
-            hint="O câmbio desta transferência passa a ser usado para converter os seus gastos em reais."
+            hint="O câmbio desta transferência passa a ser usado para converter os valores nessa moeda."
           />
         )}
 

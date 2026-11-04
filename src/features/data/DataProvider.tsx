@@ -9,9 +9,10 @@ import {
   subscribeRecurrences,
 } from '@/data/repository'
 import { monthOf, todayKey } from '@/domain/dates'
+import { currencySettings } from '@/domain/money'
 import { missingOccurrences } from '@/domain/recurrence'
 import { useSubscription } from '@/lib/useSubscription'
-import { DataContext, DEFAULT_BRL_PER_EUR, type DataState } from './dataContext'
+import { DataContext, type DataState } from './dataContext'
 
 /**
  * Keeps the signed-in person's data live: accounts, categories, recurrences, goals and this
@@ -52,7 +53,7 @@ export function DataProvider({ uid, children }: { uid: string; children: ReactNo
   const value = useMemo<DataState>(() => {
     const accountList = accounts.data ?? []
     const accountById = new Map(accountList.map((account) => [account.id, account]))
-    const brlPerEur = profile.data?.brlPerEur ?? DEFAULT_BRL_PER_EUR
+    const { baseCurrency, rates } = currencySettings(profile.data)
     return {
       uid,
       loading,
@@ -64,13 +65,15 @@ export function DataProvider({ uid, children }: { uid: string; children: ReactNo
       transactions: transactions.data ?? [],
       today,
       month,
-      brlPerEur,
+      baseCurrency,
+      rates,
       accountById,
       categoryById: new Map((categories.data ?? []).map((category) => [category.id, category])),
       writeContext: {
         uid,
-        brlPerEur,
-        currencyOf: (accountId) => accountById.get(accountId)?.currency ?? 'EUR',
+        baseCurrency,
+        rates,
+        currencyOf: (accountId) => accountById.get(accountId)?.currency ?? baseCurrency,
       },
     }
   }, [

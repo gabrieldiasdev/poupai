@@ -41,7 +41,7 @@ describe('summarizeMonth', () => {
     entry({ status: 'skipped', amount: 9_999 }),
   ]
 
-  const summary = summarizeMonth(transactions, accounts, [emergency], 6, '2026-11-21')
+  const summary = summarizeMonth(transactions, accounts, [emergency], 'EUR', { BRL: 6 }, '2026-11-21')
 
   it('adds up what came in and went out, converting reais and ignoring transfers', () => {
     expect(summary.income).toBe(145_000)
@@ -61,14 +61,20 @@ describe('summarizeMonth', () => {
     expect(summary.byCategory.map((total) => total.categoryId)).toEqual(['food', 'fun', 'subscriptions'])
   })
 
+  it('adds everything up in whichever main currency the person chose', () => {
+    const inReais = summarizeMonth(transactions, accounts, [], 'BRL', { EUR: 0.2 }, '2026-11-21')
+    expect(inReais.income).toBe(725_000)
+    expect(inReais.expense).toBe(6_000 + (24_000 + 18_000) * 5)
+  })
+
   it('stops reserving for a goal that is nearly complete', () => {
     const almostThere = { ...emergency, saved: 445_000 }
-    expect(summarizeMonth([], accounts, [almostThere], 6, '2026-11-21').goalReserve).toBe(5_000)
-    expect(summarizeMonth([], accounts, [{ ...emergency, saved: 450_000 }], 6, '2026-11-21').goalReserve).toBe(0)
+    expect(summarizeMonth([], accounts, [almostThere], 'EUR', { BRL: 6 }, '2026-11-21').goalReserve).toBe(5_000)
+    expect(summarizeMonth([], accounts, [{ ...emergency, saved: 450_000 }], 'EUR', { BRL: 6 }, '2026-11-21').goalReserve).toBe(0)
   })
 
   it('does not spread a negative balance over the days left', () => {
-    const overspent = summarizeMonth([entry({ amount: 1_000 })], accounts, [], 6, '2026-11-21')
+    const overspent = summarizeMonth([entry({ amount: 1_000 })], accounts, [], 'EUR', { BRL: 6 }, '2026-11-21')
     expect(overspent.spendable).toBe(-1_000)
     expect(overspent.perDay).toBe(0)
   })

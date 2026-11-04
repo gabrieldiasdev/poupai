@@ -13,7 +13,7 @@ import { useEntrySheet } from './entrySheetContext'
 import { TransactionRow } from './TransactionRow'
 
 export function TransactionsPage() {
-  const { uid, month: currentMonth, transactions: currentTransactions, accounts, goals, brlPerEur, today } = useData()
+  const { uid, month: currentMonth, transactions: currentTransactions, accounts, goals, baseCurrency, rates, today } = useData()
   const openEntry = useEntrySheet()
   const [month, setMonth] = useState(currentMonth)
 
@@ -24,7 +24,7 @@ export function TransactionsPage() {
   )
   const transactions = month === currentMonth ? currentTransactions : other.data
   const visible = (transactions ?? []).filter((transaction) => transaction.status !== 'skipped')
-  const summary = summarizeMonth(visible, accounts, goals, brlPerEur, today)
+  const summary = summarizeMonth(visible, accounts, goals, baseCurrency, rates, today)
 
   const byDay = new Map<string, Transaction[]>()
   for (const transaction of visible) {
@@ -57,8 +57,8 @@ export function TransactionsPage() {
       </div>
 
       <p className="px-4 pb-3 text-center text-sm text-muted">
-        Entrou <span className="font-medium text-income">{formatMoney(summary.income)}</span> · Saiu{' '}
-        <span className="font-medium text-expense">{formatMoney(summary.expense)}</span>
+        Entrou <span className="font-medium text-income">{formatMoney(summary.income, baseCurrency)}</span> · Saiu{' '}
+        <span className="font-medium text-expense">{formatMoney(summary.expense, baseCurrency)}</span>
       </p>
 
       {!transactions ? (

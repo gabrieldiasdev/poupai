@@ -1,9 +1,17 @@
 import { createContext, use } from 'react'
 import type { WriteContext } from '@/data/repository'
-import type { Account, Category, DateKey, Goal, MonthKey, Profile, Recurrence, Transaction } from '@/domain/model'
-
-/** Used until the user's first euro-to-real transfer tells us the rate they actually get. */
-export const DEFAULT_BRL_PER_EUR = 6.2
+import type {
+  Account,
+  Category,
+  Currency,
+  DateKey,
+  Goal,
+  MonthKey,
+  Profile,
+  Rates,
+  Recurrence,
+  Transaction,
+} from '@/domain/model'
 
 export interface DataState {
   uid: string
@@ -18,7 +26,8 @@ export interface DataState {
   transactions: Transaction[]
   today: DateKey
   month: MonthKey
-  brlPerEur: number
+  baseCurrency: Currency
+  rates: Rates
   accountById: Map<string, Account>
   categoryById: Map<string, Category>
   /** Everything a write needs to keep goal totals and the exchange rate right. */

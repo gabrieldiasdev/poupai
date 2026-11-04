@@ -6,13 +6,14 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Sheet } from '@/components/ui/Sheet'
 import { newId, saveAccount } from '@/data/repository'
 import type { Account, Currency } from '@/domain/model'
+import { CURRENCIES, CURRENCY_NAMES, CURRENCY_SYMBOLS } from '@/domain/money'
 import { useData } from '@/features/data/dataContext'
 
 export function AccountSheet({ account, onClose }: { account?: Account; onClose: () => void }) {
-  const { uid } = useData()
+  const { uid, baseCurrency } = useData()
   const toast = useToast()
   const [name, setName] = useState(account?.name ?? '')
-  const [currency, setCurrency] = useState<Currency>(account?.currency ?? 'EUR')
+  const [currency, setCurrency] = useState<Currency>(account?.currency ?? baseCurrency)
   const [error, setError] = useState<string | null>(null)
 
   function save() {
@@ -47,7 +48,7 @@ export function AccountSheet({ account, onClose }: { account?: Account; onClose:
         <TextField
           label="Nome"
           maxLength={60}
-          placeholder="Bankinter, Revolut, Dinheiro…"
+          placeholder="Banco, carteira, dinheiro…"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
@@ -57,10 +58,7 @@ export function AccountSheet({ account, onClose }: { account?: Account; onClose:
             label="Moeda"
             value={currency}
             onChange={setCurrency}
-            options={[
-              { value: 'EUR', label: 'Euro (€)' },
-              { value: 'BRL', label: 'Real (R$)' },
-            ]}
+            options={CURRENCIES.map((value) => ({ value, label: `${CURRENCY_NAMES[value]} (${CURRENCY_SYMBOLS[value]})` }))}
           />
         )}
       </div>

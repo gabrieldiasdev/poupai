@@ -40,7 +40,7 @@ export function RecurrenceSheet({ recurrence, onClose }: { recurrence?: Recurren
   function save() {
     const cents = parseAmount(amount)
     const dayNumber = Number(day)
-    if (!name.trim()) return setError('Dê um nome, por exemplo “Salário” ou “Ginásio”.')
+    if (!name.trim()) return setError('Dê um nome, por exemplo “Salário” ou “Internet”.')
     if (!cents) return setError('Indique o valor.')
     if (!Number.isInteger(dayNumber) || dayNumber < 1 || dayNumber > 31) return setError('O dia deve estar entre 1 e 31.')
     if (months && months.length === 0) return setError('Escolha pelo menos um mês.')
@@ -117,7 +117,7 @@ export function RecurrenceSheet({ recurrence, onClose }: { recurrence?: Recurren
         <TextField
           label="Nome"
           maxLength={60}
-          placeholder={type === 'income' ? 'Salário' : 'Ginásio'}
+          placeholder={type === 'income' ? 'Salário' : 'Internet'}
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
@@ -184,7 +184,7 @@ export function RecurrenceSheet({ recurrence, onClose }: { recurrence?: Recurren
               ))}
             </div>
           )}
-          <p className="mt-2 text-xs text-muted">Use “só em alguns meses” para os subsídios de férias e de Natal.</p>
+          <p className="mt-2 text-xs text-muted">Use “só em alguns meses” para extras como 13º salário, férias ou bônus.</p>
         </div>
       </div>
     </Sheet>

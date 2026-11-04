@@ -21,10 +21,11 @@ import type {
   Goal,
   MonthKey,
   Profile,
+  Rates,
   Recurrence,
   Transaction,
 } from '@/domain/model'
-import { toEur } from '@/domain/money'
+import { rateFromTransfer, toBase } from '@/domain/money'
 import { occurrenceId, occursIn, plannedOccurrence } from '@/domain/recurrence'
 import { db } from '@/lib/firebase'
 import type { Subscribe } from '@/lib/useSubscription'
@@ -78,44 +79,45 @@ export function subscribeMonthTransactions(uid: string, month: MonthKey): Subscr
 
 // ---- Transactions ----
 
-/** What a saving adds to its goal, in EUR cents (goals are kept in euros). */
-function goalDelta(transaction: Transaction, currencyOf: (accountId: string) => Currency, brlPerEur: number) {
-  if (transaction.type !== 'saving' || transaction.status !== 'confirmed' || !transaction.goalId) return null
-  return {
-    goalId: transaction.goalId,
-    amount: toEur(transaction.amount, currencyOf(transaction.accountId), brlPerEur),
-  }
-}
-
 export interface WriteContext {
   uid: string
   currencyOf: (accountId: string) => Currency
-  brlPerEur: number
+  baseCurrency: Currency
+  rates: Rates
+}
+
+/** What a saving adds to its goal, in the main currency (goals are kept in it). */
+function goalDelta(transaction: Transaction, { currencyOf, baseCurrency, rates }: WriteContext) {
+  if (transaction.type !== 'saving' || transaction.status !== 'confirmed' || !transaction.goalId) return null
+  return {
+    goalId: transaction.goalId,
+    amount: toBase(transaction.amount, currencyOf(transaction.accountId), baseCurrency, rates),
+  }
 }
 
 /** Creates or replaces an entry, keeping goal totals and the exchange rate in step with it. */
 export async function saveTransaction(context: WriteContext, transaction: Transaction, previous?: Transaction) {
-  const { uid, currencyOf, brlPerEur } = context
+  const { uid, currencyOf, baseCurrency } = context
   const batch = writeBatch(db)
   batch.set(docIn(uid, 'transactions', transaction.id), {
     ...withoutId(transaction),
     updatedAt: serverTimestamp(),
   })
 
-  const before = previous ? goalDelta(previous, currencyOf, brlPerEur) : null
-  const after = goalDelta(transaction, currencyOf, brlPerEur)
+  const before = previous ? goalDelta(previous, context) : null
+  const after = goalDelta(transaction, context)
   if (before) batch.update(docIn(uid, 'goals', before.goalId), { saved: increment(-before.amount) })
   if (after) batch.update(docIn(uid, 'goals', after.goalId), { saved: increment(after.amount) })
 
-  // A transfer from euros to reais tells us the real rate the user got.
-  if (
-    transaction.type === 'transfer' &&
-    transaction.toAccountId &&
-    transaction.toAmount &&
-    currencyOf(transaction.accountId) === 'EUR' &&
-    currencyOf(transaction.toAccountId) === 'BRL'
-  ) {
-    batch.set(userDoc(uid), { brlPerEur: transaction.toAmount / transaction.amount }, { merge: true })
+  if (transaction.type === 'transfer' && transaction.toAccountId && transaction.toAmount) {
+    const learned = rateFromTransfer(
+      currencyOf(transaction.accountId),
+      currencyOf(transaction.toAccountId),
+      transaction.amount,
+      transaction.toAmount,
+      baseCurrency,
+    )
+    if (learned) batch.set(userDoc(uid), { rates: { [learned.currency]: learned.rate } }, { merge: true })
   }
 
   await batch.commit()
@@ -123,13 +125,13 @@ export async function saveTransaction(context: WriteContext, transaction: Transa
 
 /** Removes an entry. A recurring one is marked skipped instead, so it isn't generated again this month. */
 export async function deleteTransaction(context: WriteContext, transaction: Transaction) {
-  const { uid, currencyOf, brlPerEur } = context
+  const { uid } = context
   const batch = writeBatch(db)
   const ref = docIn(uid, 'transactions', transaction.id)
   if (transaction.recurrenceId) batch.update(ref, { status: 'skipped', updatedAt: serverTimestamp() })
   else batch.delete(ref)
 
-  const delta = goalDelta(transaction, currencyOf, brlPerEur)
+  const delta = goalDelta(transaction, context)
   if (delta) batch.update(docIn(uid, 'goals', delta.goalId), { saved: increment(-delta.amount) })
   await batch.commit()
 }
@@ -202,7 +204,7 @@ export interface Setup {
   categories: Category[]
   recurrences: Recurrence[]
   goals: Goal[]
-  brlPerEur: number
+  baseCurrency: Currency
 }
 
 /** Writes everything onboarding prepared in one go, then marks the profile as ready. */
@@ -214,7 +216,8 @@ export async function completeSetup(uid: string, setup: Setup) {
   for (const goal of setup.goals) batch.set(docIn(uid, 'goals', goal.id), withoutId(goal))
   batch.set(userDoc(uid), {
     onboarded: true,
-    brlPerEur: setup.brlPerEur,
+    baseCurrency: setup.baseCurrency,
+    rates: {},
     createdAt: serverTimestamp(),
   } satisfies Profile & DocumentData)
   await batch.commit()

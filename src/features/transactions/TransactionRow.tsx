@@ -24,9 +24,9 @@ export function TransactionRow({
   detail?: string
   onClick: () => void
 }) {
-  const { categoryById, accountById } = useData()
+  const { categoryById, accountById, baseCurrency } = useData()
   const label = useEntryLabel()
-  const currency = accountById.get(transaction.accountId)?.currency ?? 'EUR'
+  const currency = accountById.get(transaction.accountId)?.currency ?? baseCurrency
   const sign = transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '−' : ''
   const kind = transaction.type === 'transfer' ? 'transfer' : transaction.type === 'saving' ? 'saving' : 'category'
 

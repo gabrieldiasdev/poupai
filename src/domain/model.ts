@@ -1,5 +1,8 @@
 /** Money is always stored as integer minor units (cents) together with its currency. */
-export type Currency = 'EUR' | 'BRL'
+export type Currency = 'BRL' | 'EUR' | 'USD'
+
+/** How many units of each other currency one unit of the person's main currency buys. */
+export type Rates = Partial<Record<Currency, number>>
 
 /** Calendar day as `YYYY-MM-DD`, with no time zone, so an entry never jumps to another day. */
 export type DateKey = string
@@ -62,16 +65,20 @@ export interface Recurrence {
 export interface Goal {
   id: string
   name: string
-  /** In EUR cents. */
+  /** In cents of the person's main currency. */
   target: number
-  /** How much to set aside each month, in EUR cents. */
+  /** How much to set aside each month, in cents of the main currency. */
   monthly: number
-  /** Running total in EUR cents, kept in step with the goal's savings. */
+  /** Running total in cents of the main currency, kept in step with the goal's savings. */
   saved: number
 }
 
 export interface Profile {
   onboarded: boolean
-  /** How many BRL one euro buys; updated from the user's own transfers. */
-  brlPerEur: number
+  /** The currency totals and goals are shown in. Profiles from before this field existed are in EUR. */
+  baseCurrency?: Currency
+  /** Updated from the person's own transfers, so they reflect the rate actually obtained. */
+  rates?: Rates
+  /** Replaced by `rates`; still read on profiles created before it existed. */
+  brlPerEur?: number
 }

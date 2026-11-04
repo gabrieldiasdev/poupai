@@ -5,11 +5,12 @@ import { TextField } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
 import { newId, saveGoal } from '@/data/repository'
 import type { Goal } from '@/domain/model'
-import { amountToInput, parseAmount } from '@/domain/money'
+import { amountToInput, CURRENCY_SYMBOLS, parseAmount } from '@/domain/money'
 import { useData } from '@/features/data/dataContext'
 
 export function GoalSheet({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
-  const { uid } = useData()
+  const { uid, baseCurrency } = useData()
+  const symbol = CURRENCY_SYMBOLS[baseCurrency]
   const toast = useToast()
   const [name, setName] = useState(goal?.name ?? (goal ? '' : 'Fundo de emergência'))
   const [target, setTarget] = useState(goal ? amountToInput(goal.target) : '')
@@ -58,17 +59,17 @@ export function GoalSheet({ goal, onClose }: { goal?: Goal; onClose: () => void 
       <div className="flex flex-col gap-4">
         <TextField label="Nome" maxLength={60} value={name} onChange={(event) => setName(event.target.value)} />
         <TextField
-          label="Quanto quer juntar (€)"
+          label={`Quanto quer juntar (${symbol})`}
           inputMode="decimal"
-          placeholder="4.500"
+          placeholder="0,00"
           value={target}
           onChange={(event) => setTarget(event.target.value)}
           hint={!goal ? 'Para um fundo de emergência, o comum é 3 a 6 meses dos seus gastos.' : undefined}
         />
         <TextField
-          label="Quanto guardar por mês (€)"
+          label={`Quanto guardar por mês (${symbol})`}
           inputMode="decimal"
-          placeholder="250"
+          placeholder="0,00"
           value={monthly}
           onChange={(event) => setMonthly(event.target.value)}
           hint="Esse valor fica reservado no “ainda pode gastar” até você guardá-lo."

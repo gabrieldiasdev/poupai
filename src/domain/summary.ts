@@ -1,13 +1,13 @@
 import { daysLeftInMonth, monthOf } from './dates'
-import type { Account, Currency, DateKey, Goal, Transaction } from './model'
-import { toEur } from './money'
+import type { Account, Currency, DateKey, Goal, Rates, Transaction } from './model'
+import { toBase } from './money'
 
 export interface CategoryTotal {
   categoryId: string | null
   amount: number
 }
 
-/** Every figure is in EUR cents. */
+/** Every figure is in cents of the person's main currency. */
 export interface MonthSummary {
   /** Confirmed income ("entrou"). */
   income: number
@@ -33,12 +33,13 @@ export function summarizeMonth(
   transactions: Transaction[],
   accounts: Account[],
   goals: Goal[],
-  brlPerEur: number,
+  baseCurrency: Currency,
+  rates: Rates,
   today: DateKey,
 ): MonthSummary {
   const currencyOf = new Map<string, Currency>(accounts.map((account) => [account.id, account.currency]))
-  const eur = (transaction: Transaction) =>
-    toEur(transaction.amount, currencyOf.get(transaction.accountId) ?? 'EUR', brlPerEur)
+  const inBase = (transaction: Transaction) =>
+    toBase(transaction.amount, currencyOf.get(transaction.accountId) ?? baseCurrency, baseCurrency, rates)
 
   let income = 0
   let expense = 0
@@ -49,7 +50,7 @@ export function summarizeMonth(
   const byCategory = new Map<string | null, number>()
 
   for (const transaction of transactions) {
-    const amount = eur(transaction)
+    const amount = inBase(transaction)
     const confirmed = transaction.status === 'confirmed'
     const planned = transaction.status === 'planned'
 

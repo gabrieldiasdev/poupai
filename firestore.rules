@@ -29,12 +29,14 @@ service cloud.firestore {
     }
 
     function isCurrency(value) {
-      return value in ['EUR', 'BRL'];
+      return value in ['BRL', 'EUR', 'USD'];
     }
 
     function isProfile(data) {
-      return data.keys().hasOnly(['onboarded', 'brlPerEur', 'createdAt'])
+      return data.keys().hasOnly(['onboarded', 'baseCurrency', 'rates', 'brlPerEur', 'createdAt'])
         && (!('onboarded' in data) || data.onboarded is bool)
+        && (!('baseCurrency' in data) || isCurrency(data.baseCurrency))
+        && (!('rates' in data) || data.rates is map)
         && (!('brlPerEur' in data) || (data.brlPerEur is number && data.brlPerEur > 0));
     }
 

@@ -12,6 +12,6 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'education', name: 'Educação', icon: 'education', kind: 'expense', order: 7 },
   { id: 'other-expense', name: 'Outros', icon: 'other', kind: 'expense', order: 8 },
   { id: 'salary', name: 'Salário', icon: 'briefcase', kind: 'income', order: 0 },
-  { id: 'bonus', name: 'Subsídios', icon: 'gift', kind: 'income', order: 1 },
+  { id: 'bonus', name: 'Extras', icon: 'gift', kind: 'income', order: 1 },
   { id: 'other-income', name: 'Outros ganhos', icon: 'coins', kind: 'income', order: 2 },
 ]
