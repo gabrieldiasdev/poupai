@@ -4,9 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:emulators": "vite --mode emulators",
-    "emulators": "firebase emulators:start --project demo-poupai",
+    "dev": "firebase emulators:exec --only auth,firestore --ui --project demo-poupai \"vite --mode emulators\"",
+    "prod": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",

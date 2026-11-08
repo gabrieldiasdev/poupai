@@ -9,11 +9,12 @@ Tudo roda contra os emuladores do Firebase, sem precisar de um projeto real (req
 
 ```bash
 npm install
-npm run emulators       # Auth + Firestore + UI em http://127.0.0.1:4000
-npm run dev:emulators   # app em http://localhost:5173
+npm run dev    # app em http://localhost:5173, emuladores em http://127.0.0.1:4000
 ```
 
-No login, o emulador mostra uma página para criar uma conta Google de teste.
+No login, o emulador mostra uma página para criar uma conta Google de teste. Os dados somem ao parar o comando.
+
+`npm run prod` roda o código local contra o **Firebase real** (`poupai-eu`, configurado em `.env.local`). Use só quando quiser mexer nos dados de verdade.
 
 ## Verificações
 

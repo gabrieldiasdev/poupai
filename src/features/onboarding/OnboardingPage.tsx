@@ -52,9 +52,13 @@ export function OnboardingPage() {
   const [bills, setBills] = useState<BillDraft[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [finished, setFinished] = useState(false)
 
   if (loading) return <FullScreenLoader />
-  if (profile?.onboarded) return <Navigate to="/" replace />
+  // Firestore shows the profile as saved before the server accepts it. Leaving on that optimistic copy
+  // would drop the answers if the write is then rejected, so after submitting wait for the confirmation.
+  if (profile?.onboarded && (!submitted || finished)) return <Navigate to="/" replace />
 
   const symbol = CURRENCY_SYMBOLS[currency]
   const incomeCents = income.trim() ? parseAmount(income) : null
@@ -205,10 +209,12 @@ export function OnboardingPage() {
     )
 
     setSaving(true)
+    setSubmitted(true)
     setError(null)
     try {
       // Awaited on purpose: the app needs the profile before it can open, and this is the first write.
       await completeSetup(uid, setup)
+      setFinished(true)
     } catch (setupError) {
       console.error(setupError)
       setError('Não foi possível guardar. Verifique a conexão e tente de novo.')
